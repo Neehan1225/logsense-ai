@@ -8,6 +8,8 @@ import datetime
 
 from app.core.database import get_db
 from app.models.log_entry import LogEntry, LogLevel
+from app.services.ai_service import analyze_log
+
 
 router = APIRouter(prefix="/logs", tags=["logs"])
 
@@ -35,21 +37,20 @@ class LogResponse(BaseModel):
 
 @router.post("/", response_model=LogResponse, status_code=status.HTTP_201_CREATED)
 def create_log(
-    log_data: LogCreate,     
-    db: Session = Depends(get_db) 
+    log_data: LogCreate,
+    db: Session = Depends(get_db)
 ):
-    """
-    Create a new log entry.
-    
-    This docstring appears in your auto-generated API documentation!
-    Send a POST request to /logs/ with JSON body to create a log.
-    """
     db_log = LogEntry(**log_data.dict())
     
+    # Add AI analysis automatically
+    db_log.ai_analysis = analyze_log(
+        service_name=log_data.service_name,
+        level=log_data.level,
+        message=log_data.message
+    )
+    
     db.add(db_log)
-    
     db.commit()
-    
     db.refresh(db_log)
     
     return db_log
